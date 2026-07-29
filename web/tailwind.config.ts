@@ -1,0 +1,101 @@
+import type { Config } from "tailwindcss";
+
+export default {
+  content: ["./app/**/*.{ts,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        // Neon Mint Palette
+        base: {
+          DEFAULT: "#0d1b2a",
+          light: "#1a2d3d",
+          lighter: "#263f52",
+        },
+        mint: {
+          DEFAULT: "#2dd4a8",
+          light: "#4ce0ba",
+          lighter: "#6becce",
+          dark: "#24b893",
+        },
+        glow: {
+          DEFAULT: "#73ffb8",
+          light: "#8affc6",
+          dark: "#5cd49a",
+        },
+        // Semantic tokens
+        surface: {
+          DEFAULT: "#1a2d3d",
+          elevated: "#263f52",
+          card: "#1e3244",
+        },
+        success: "#2dd4a8",
+        warning: "#fbbf24",
+        error: "#ef4444",
+        info: "#60a5fa",
+      },
+      fontFamily: {
+        display: ["Space Grotesk", "sans-serif"],
+        body: ["Inter", "sans-serif"],
+      },
+      spacing: {
+        // 4px grid system
+        '0.5': '2px',
+        '1': '4px',
+        '1.5': '6px',
+        '2': '8px',
+        '2.5': '10px',
+        '3': '12px',
+        '3.5': '14px',
+        '4': '16px',
+        '5': '20px',
+        '6': '24px',
+        '7': '28px',
+        '8': '32px',
+        '9': '36px',
+        '10': '40px',
+        '11': '44px',
+        '12': '48px',
+        '14': '56px',
+        '16': '64px',
+        '20': '80px',
+        '24': '96px',
+        '28': '112px',
+        '32': '128px',
+        '36': '144px',
+        '40': '160px',
+        '44': '176px',
+        '48': '192px',
+        '52': '208px',
+        '56': '224px',
+        '60': '240px',
+        '64': '256px',
+        '72': '288px',
+        '80': '320px',
+        '96': '384px',
+      },
+      borderRadius: {
+        'sm': '4px',
+        'md': '8px',
+        'lg': '12px',
+        'xl': '16px',
+        '2xl': '24px',
+        '3xl': '32px',
+        'full': '9999px',
+      },
+      boxShadow: {
+        'glow': '0 0 20px rgba(45, 212, 168, 0.3), 0 0 40px rgba(45, 212, 168, 0.1)',
+        'glow-strong': '0 0 30px rgba(45, 212, 168, 0.5), 0 0 60px rgba(45, 212, 168, 0.2)',
+        'elevation-1': '0 2px 4px rgba(0, 0, 0, 0.1)',
+        'elevation-2': '0 4px 8px rgba(0, 0, 0, 0.15)',
+        'elevation-3': '0 8px 16px rgba(0, 0, 0, 0.2)',
+        'elevation-4': '0 16px 32px rgba(0, 0, 0, 0.25)',
+      },
+      backgroundImage: {
+        'gradient-primary': 'linear-gradient(135deg, #2dd4a8 0%, #73ffb8 100%)',
+        'gradient-surface': 'linear-gradient(180deg, #1a2d3d 0%, #0d1b2a 100%)',
+        'gradient-hero': 'linear-gradient(135deg, #0d1b2a 0%, #1a2d3d 50%, #2dd4a8 100%)',
+      },
+    },
+  },
+  plugins: [],
+} satisfies Config;
