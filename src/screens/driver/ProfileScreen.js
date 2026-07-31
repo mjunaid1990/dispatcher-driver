@@ -5,45 +5,43 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, elevation, typography } from '../../theme/theme';
 import Button from '../../components/Button';
+import { useDriver } from '../../hooks/useDriver';
+import { confirmAction } from '../../utils/alerts';
 
 const ProfileScreen = () => {
   const { userInfo, logout } = useAuth();
+  const { driver, loading } = useDriver();
   const navigation = useNavigation();
 
   const menuItems = [
-    { icon: '👤', label: 'Edit Profile', screen: null },
-    { icon: '🚗', label: 'Vehicle Information', screen: null },
-    { icon: '📄', label: 'Documents', screen: null },
-    { icon: '📍', label: 'Saved Addresses', screen: null },
-    { icon: '🔔', label: 'Notifications', screen: null },
-    { icon: '💳', label: 'Payment Methods', screen: null },
-    { icon: '📊', label: 'Performance', screen: null },
-    { icon: '❓', label: 'Help & Support', screen: null },
-    { icon: '⚙️', label: 'Settings', screen: null },
+    { icon: 'person-circle-outline', label: 'Edit Profile', screen: 'ProfileEdit' },
+    { icon: 'car-outline', label: 'Vehicle Information', screen: 'ProfileVehicle' },
+    { icon: 'document-text-outline', label: 'Documents', screen: 'ProfileDocuments' },
+    { icon: 'notifications-outline', label: 'Notifications', screen: 'ProfileNotifications' },
+    { icon: 'card-outline', label: 'Payment Methods', screen: 'ProfilePayments' },
+    { icon: 'stats-chart-outline', label: 'Performance', screen: 'ProfilePerformance' },
+    { icon: 'help-circle-outline', label: 'Help & Support', screen: 'ProfileSupport' },
+    { icon: 'settings-outline', label: 'Settings', screen: 'ProfileSettings' },
   ];
 
   const handleMenuPress = (item) => {
-    Alert.alert('Coming Soon', `${item.label} feature coming soon`);
+    if (item.screen) {
+      navigation.navigate(item.screen);
+    }
   };
 
   const handleLogout = () => {
-    Alert.alert(
+    confirmAction(
       'Logout',
       'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: () => logout(),
-        },
-      ]
+      () => logout(),
+      { confirmText: 'Logout', destructive: true }
     );
   };
 
@@ -77,22 +75,30 @@ const ProfileScreen = () => {
 
         {/* Driver Status */}
         <View style={styles.statusCard}>
-          <View style={styles.statusRow}>
-            <View style={styles.statusItem}>
-              <Text style={styles.statusValue}>4.9</Text>
-              <Text style={styles.statusLabel}>Rating</Text>
+          {loading ? (
+            <Text style={styles.statusLoading}>Loading...</Text>
+          ) : (
+            <View style={styles.statusRow}>
+              <View style={styles.statusItem}>
+                <Text style={styles.statusValue}>
+                  {driver?.rating ? Number(driver.rating).toFixed(1) : '0.0'}
+                </Text>
+                <Text style={styles.statusLabel}>Rating</Text>
+              </View>
+              <View style={styles.statusDivider} />
+              <View style={styles.statusItem}>
+                <Text style={styles.statusValue}>{driver?.totalDeliveries ?? 0}</Text>
+                <Text style={styles.statusLabel}>Deliveries</Text>
+              </View>
+              <View style={styles.statusDivider} />
+              <View style={styles.statusItem}>
+                <Text style={styles.statusValue}>
+                  ${Number(driver?.earningsBalance ?? 0).toFixed(2)}
+                </Text>
+                <Text style={styles.statusLabel}>Balance</Text>
+              </View>
             </View>
-            <View style={styles.statusDivider} />
-            <View style={styles.statusItem}>
-              <Text style={styles.statusValue}>156</Text>
-              <Text style={styles.statusLabel}>Deliveries</Text>
-            </View>
-            <View style={styles.statusDivider} />
-            <View style={styles.statusItem}>
-              <Text style={styles.statusValue}>98%</Text>
-              <Text style={styles.statusLabel}>On-Time</Text>
-            </View>
-          </View>
+          )}
         </View>
 
         {/* Menu Items */}
@@ -104,10 +110,10 @@ const ProfileScreen = () => {
               onPress={() => handleMenuPress(item)}
             >
               <View style={styles.menuLeft}>
-                <Text style={styles.menuIcon}>{item.icon}</Text>
+                <Ionicons name={item.icon} size={20} color={colors.textSecondary} style={styles.menuIcon} />
                 <Text style={styles.menuLabel}>{item.label}</Text>
               </View>
-              <Text style={styles.menuArrow}>→</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
             </TouchableOpacity>
           ))}
         </View>
@@ -199,6 +205,11 @@ const styles = StyleSheet.create({
     padding: spacing['2xl'],
     ...elevation.md,
   },
+  statusLoading: {
+    textAlign: 'center',
+    color: colors.textTertiary,
+    fontSize: typography.fontSize.sm,
+  },
   statusRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
@@ -240,16 +251,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   menuIcon: {
-    fontSize: typography.fontSize.xl,
     marginRight: spacing.md,
   },
   menuLabel: {
     fontSize: typography.fontSize.base,
     color: colors.text,
-  },
-  menuArrow: {
-    fontSize: typography.fontSize.lg,
-    color: colors.textTertiary,
   },
   logoutSection: {
     marginHorizontal: spacing.lg,

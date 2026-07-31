@@ -161,24 +161,29 @@ export const gradients = {
 
 export const statusColors = {
   pending: {
-    bg: 'rgba(107, 114, 128, 0.2)',
-    text: '#9ca3af',
-    border: '#6b7280',
+    bg: 'rgba(251, 191, 36, 0.2)',
+    text: '#fbbf24',
+    border: '#fbbf24',
   },
   assigned: {
     bg: 'rgba(59, 130, 246, 0.2)',
     text: '#60a5fa',
     border: '#3b82f6',
   },
-  in_transit: {
+  accepted: {
     bg: 'rgba(45, 212, 168, 0.2)',
     text: '#2dd4a8',
     border: '#2dd4a8',
   },
-  arrived: {
+  picked_up: {
     bg: 'rgba(139, 92, 246, 0.2)',
     text: '#a78bfa',
     border: '#8b5cf6',
+  },
+  in_transit: {
+    bg: 'rgba(99, 102, 241, 0.2)',
+    text: '#818cf8',
+    border: '#6366f1',
   },
   delivered: {
     bg: 'rgba(45, 212, 168, 0.2)',

@@ -5,15 +5,16 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, borderRadius, elevation, typography } from '../../theme/theme';
+import { colors, spacing, borderRadius, typography } from '../../theme/theme';
 import Button from '../../components/Button';
+import api from '../../api/client';
+import { showAlert } from '../../utils/alerts';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
@@ -23,16 +24,29 @@ const LoginScreen = () => {
   const navigation = useNavigation();
 
   const handleLogin = async () => {
-    const mockToken = 'mock-jwt-token';
-    const mockUser = {
-      id: '1',
-      email: email || 'driver@example.com',
-      name: 'Driver Name',
-      role: 'driver',
-      phone: '+1234567890',
-    };
-    await login(mockToken, mockUser);
-    navigation.navigate('DriverHome');
+    if (!email || !password) {
+      showAlert('Error', 'Please enter your email and password');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await api.post('/users/login', { email, password });
+      const { token, user } = response.data;
+
+      let driver = null;
+      try {
+        const driverRes = await api.get('/drivers', { params: { userId: user._id } });
+        driver = driverRes.data[0] || null;
+      } catch (driverError) {}
+
+      await login(token, user, driver);
+    } catch (error) {
+      const message = error.response?.data?.message || 'Login failed. Please try again.';
+      showAlert('Login Failed', message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -78,7 +92,7 @@ const LoginScreen = () => {
 
           <TouchableOpacity
             style={styles.forgotPassword}
-            onPress={() => Alert.alert('Info', 'Forgot password feature coming soon')}
+            onPress={() => showAlert('Info', 'Forgot password feature coming soon')}
           >
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>

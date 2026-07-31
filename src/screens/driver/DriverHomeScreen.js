@@ -1,118 +1,146 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  Alert,
   RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, borderRadius, elevation, typography } from '../../theme/theme';
 import StatusPill from '../../components/StatusPill';
 import Button from '../../components/Button';
+import api from '../../api/client';
+import { mapOrderToDelivery, mapAssignmentToDelivery, ACTIVE_STATUSES } from '../../api/mappers';
+import { showAlert, confirmAction } from '../../utils/alerts';
 
 const DriverHomeScreen = () => {
   const navigation = useNavigation();
-  const { userInfo } = useAuth();
+  const { userInfo, driverInfo } = useAuth();
+  const [driver, setDriver] = useState(driverInfo);
   const [activeDeliveries, setActiveDeliveries] = useState([]);
   const [availableDeliveries, setAvailableDeliveries] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(driverInfo?.status === 'online');
 
-  // Mock data - replace with API calls
-  useEffect(() => {
-    loadDeliveries();
-  }, []);
-
-  const loadDeliveries = () => {
-    // Mock active deliveries
-    setActiveDeliveries([
-      {
-        id: '1',
-        customerName: 'John Doe',
-        pickupAddress: '123 Main St, Downtown',
-        dropoffAddress: '456 Oak Ave, Suburb',
-        status: 'in_transit',
-        estimatedTime: '15 min',
-        earnings: 12.50,
-      },
-    ]);
-
-    // Mock available deliveries
-    setAvailableDeliveries([
-      {
-        id: '2',
-        customerName: 'Jane Smith',
-        pickupAddress: '789 Pine Rd, City Center',
-        dropoffAddress: '321 Elm St, Westside',
-        distance: '3.2 km',
-        earnings: 15.00,
-        estimatedTime: '20 min',
-      },
-      {
-        id: '3',
-        customerName: 'Bob Johnson',
-        pickupAddress: '555 Maple Dr, Northgate',
-        dropoffAddress: '888 Cedar Ln, Southpark',
-        distance: '5.1 km',
-        earnings: 18.50,
-        estimatedTime: '25 min',
-      },
-    ]);
+  const resolveDriver = async () => {
+    if (driver) return driver;
+    if (!userInfo) return null;
+    try {
+      const res = await api.get('/drivers', { params: { userId: userInfo._id } });
+      const found = res.data[0] || null;
+      if (found) setDriver(found);
+      return found;
+    } catch (error) {
+      return null;
+    }
   };
 
-  const onRefresh = () => {
+  const loadDeliveries = useCallback(async () => {
+    const activeDriver = await resolveDriver();
+    if (!activeDriver) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const [ordersRes, assignmentsRes] = await Promise.all([
+        api.get('/orders', { params: { driverId: activeDriver._id } }),
+        api.get('/assignments', { params: { driverId: activeDriver._id } }),
+      ]);
+
+      const orders = ordersRes.data || [];
+      const assignments = assignmentsRes.data || [];
+
+      const active = orders
+        .filter((order) => ACTIVE_STATUSES.includes(order.status))
+        .map(mapOrderToDelivery);
+
+      const pending = assignments
+        .filter((a) => a.response === 'pending' && a.orderId && typeof a.orderId === 'object')
+        .map(mapAssignmentToDelivery);
+
+      setActiveDeliveries(active);
+      setAvailableDeliveries(pending);
+    } catch (error) {
+      console.warn('Failed to load deliveries:', error.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [driver, userInfo]);
+
+  useEffect(() => {
+    loadDeliveries();
+  }, [loadDeliveries]);
+
+  const onRefresh = async () => {
     setRefreshing(true);
-    setTimeout(() => {
-      loadDeliveries();
-      setRefreshing(false);
-    }, 1000);
+    await loadDeliveries();
+    setRefreshing(false);
+  };
+
+  const handleToggleOnline = async () => {
+    const next = !isOnline;
+    setIsOnline(next);
+    try {
+      const activeDriver = await resolveDriver();
+      if (activeDriver) {
+        await api.put(`/drivers/${activeDriver._id}`, { status: next ? 'online' : 'offline' });
+      }
+    } catch (error) {
+      showAlert('Error', 'Failed to update availability');
+    }
   };
 
   const handleAcceptDelivery = (delivery) => {
-    Alert.alert(
+    confirmAction(
       'Accept Delivery',
       `Accept delivery for ${delivery.customerName}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Accept',
-          onPress: () => {
-            // TODO: Call API to accept delivery
-            Alert.alert('Success', 'Delivery accepted!');
-            setAvailableDeliveries(prev => 
-              prev.filter(d => d.id !== delivery.id)
-            );
-            setActiveDeliveries(prev => [
-              { ...delivery, status: 'assigned' },
-              ...prev,
-            ]);
-          },
-        },
-      ]
+      async () => {
+        try {
+          const activeDriver = await resolveDriver();
+          if (delivery.assignmentId) {
+            await api.put(`/assignments/${delivery.assignmentId}`, { response: 'accepted' });
+          }
+          if (activeDriver) {
+            await api.put(`/orders/${delivery.id}`, {
+              status: 'accepted',
+              assignedDriverId: activeDriver._id,
+              assignedAt: new Date().toISOString(),
+            });
+          }
+          setAvailableDeliveries((prev) => prev.filter((d) => d.id !== delivery.id));
+          setActiveDeliveries((prev) => [{ ...delivery, status: 'accepted' }, ...prev]);
+        } catch (error) {
+          showAlert('Error', error.response?.data?.message || 'Failed to accept delivery');
+        }
+      },
+      { confirmText: 'Accept' }
     );
   };
 
   const handleDeclineDelivery = (delivery) => {
-    Alert.alert(
+    confirmAction(
       'Decline Delivery',
       'Are you sure you want to decline this delivery?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Decline',
-          style: 'destructive',
-          onPress: () => {
-            // TODO: Call API to decline delivery
-            setAvailableDeliveries(prev => 
-              prev.filter(d => d.id !== delivery.id)
-            );
-          },
-        },
-      ]
+      async () => {
+        try {
+          if (delivery.assignmentId) {
+            await api.put(`/assignments/${delivery.assignmentId}`, {
+              response: 'rejected',
+              rejectReason: 'Driver declined',
+            });
+          }
+          setAvailableDeliveries((prev) => prev.filter((d) => d.id !== delivery.id));
+        } catch (error) {
+          showAlert('Error', error.response?.data?.message || 'Failed to decline delivery');
+        }
+      },
+      { confirmText: 'Decline', destructive: true }
     );
   };
 
@@ -189,7 +217,7 @@ const DriverHomeScreen = () => {
         </View>
         <TouchableOpacity
           style={[styles.onlineToggle, isOnline && styles.onlineToggleActive]}
-          onPress={() => setIsOnline(!isOnline)}
+          onPress={handleToggleOnline}
         >
           <Text style={[styles.onlineToggleText, isOnline && styles.onlineToggleTextActive]}>
             {isOnline ? 'Online' : 'Offline'}
@@ -213,37 +241,25 @@ const DriverHomeScreen = () => {
         <Text style={styles.sectionTitle}>
           Available Deliveries ({availableDeliveries.length})
         </Text>
-        <FlatList
-          data={availableDeliveries}
-          renderItem={renderAvailableDelivery}
-          keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No available deliveries</Text>
-            </View>
-          }
-        />
-      </View>
-
-      <View style={styles.bottomNav}>
-        <TouchableOpacity style={styles.navItem}>
-          <Text style={styles.navItemTextActive}>Home</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Earnings')}
-        >
-          <Text style={styles.navItemText}>Earnings</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => navigation.navigate('Profile')}
-        >
-          <Text style={styles.navItemText}>Profile</Text>
-        </TouchableOpacity>
+        {loading ? (
+          <View style={styles.emptyContainer}>
+            <ActivityIndicator size="large" color={colors.mint} />
+          </View>
+        ) : (
+          <FlatList
+            data={availableDeliveries}
+            renderItem={renderAvailableDelivery}
+            keyExtractor={(item) => item.id}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No available deliveries</Text>
+              </View>
+            }
+          />
+        )}
       </View>
     </View>
   );
@@ -376,26 +392,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: typography.fontSize.base,
     color: colors.textTertiary,
-  },
-  bottomNav: {
-    flexDirection: 'row',
-    backgroundColor: colors.surfaceCard,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingVertical: spacing.md,
-  },
-  navItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  navItemText: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-  },
-  navItemTextActive: {
-    fontSize: typography.fontSize.sm,
-    color: colors.mint,
-    fontWeight: typography.fontWeight.semibold,
   },
 });
 

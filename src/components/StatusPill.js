@@ -1,6 +1,5 @@
-import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, borderRadius, typography, statusColors } from '../theme/theme';
+import { borderRadius, typography, statusColors } from '../theme/theme';
 
 const StatusPill = ({ status, size = 'md' }) => {
   const getStatusConfig = () => {
@@ -55,8 +54,9 @@ const StatusPill = ({ status, size = 'md' }) => {
     const labels = {
       pending: 'Pending',
       assigned: 'Assigned',
+      accepted: 'Accepted',
+      picked_up: 'Picked Up',
       in_transit: 'In Transit',
-      arrived: 'Arrived',
       delivered: 'Delivered',
       failed: 'Failed',
       cancelled: 'Cancelled',

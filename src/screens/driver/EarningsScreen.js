@@ -1,16 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
+import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, borderRadius, elevation, typography } from '../../theme/theme';
 import Button from '../../components/Button';
+import api from '../../api/client';
+
+const emptyPeriod = { total: 0, deliveries: 0, hours: 0, tips: 0, history: [] };
 
 const EarningsScreen = () => {
   const [selectedPeriod, setSelectedPeriod] = useState('today');
+  const { driverInfo, userInfo } = useAuth();
+  const [earningsData, setEarningsData] = useState({
+    today: emptyPeriod,
+    week: emptyPeriod,
+    month: emptyPeriod,
+  });
+  const [loading, setLoading] = useState(true);
 
   const periods = [
     { key: 'today', label: 'Today' },
@@ -18,36 +30,75 @@ const EarningsScreen = () => {
     { key: 'month', label: 'This Month' },
   ];
 
-  const earningsData = {
-    today: {
-      total: 87.50,
-      deliveries: 7,
-      hours: 5.5,
-      tips: 12.50,
-      history: [
-        { id: '1', customer: 'John Doe', amount: 12.50, time: '10:30 AM', status: 'completed' },
-        { id: '2', customer: 'Jane Smith', amount: 15.00, time: '11:45 AM', status: 'completed' },
-        { id: '3', customer: 'Bob Johnson', amount: 18.50, time: '1:15 PM', status: 'completed' },
-        { id: '4', customer: 'Alice Brown', amount: 14.00, time: '2:30 PM', status: 'completed' },
-        { id: '5', customer: 'Charlie Davis', amount: 16.00, time: '3:45 PM', status: 'completed' },
-        { id: '6', customer: 'Diana Lee', amount: 11.50, time: '4:20 PM', status: 'completed' },
-        { id: '7', customer: 'Frank Wilson', amount: 10.00, time: '5:10 PM', status: 'in_progress' },
-      ],
-    },
-    week: {
-      total: 525.00,
-      deliveries: 42,
-      hours: 38,
-      tips: 85.00,
-      history: [],
-    },
-    month: {
-      total: 2100.00,
-      deliveries: 168,
-      hours: 152,
-      tips: 340.00,
-      history: [],
-    },
+  const startOfDay = () => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  const startOfWeek = () => {
+    const d = startOfDay();
+    const day = d.getDay() || 7;
+    d.setDate(d.getDate() - day + 1);
+    return d;
+  };
+
+  const startOfMonth = () => {
+    const d = new Date();
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+
+  useEffect(() => {
+    loadEarnings();
+  }, []);
+
+  const loadEarnings = async () => {
+    try {
+      let driverId = driverInfo?._id;
+      if (!driverId) {
+        try {
+          const res = await api.get('/drivers', { params: { userId: userInfo?._id } });
+          driverId = res.data[0]?._id;
+        } catch (error) {}
+      }
+      if (!driverId) return;
+
+      const res = await api.get('/earnings', { params: { driverId } });
+      const items = res.data || [];
+
+      const sum = (list) => list.reduce((acc, item) => acc + (item.amount || 0), 0);
+      const tipsOf = (list) => sum(list.filter((i) => i.type === 'tip'));
+
+      const today = items.filter((i) => new Date(i.createdAt) >= startOfDay());
+      const week = items.filter((i) => new Date(i.createdAt) >= startOfWeek());
+      const month = items.filter((i) => new Date(i.createdAt) >= startOfMonth());
+
+      const history = today.map((item) => ({
+        id: item._id,
+        customer:
+          (item.orderId?.dropoff && item.orderId.dropoff.contactName) ||
+          (item.orderId?.customerId && item.orderId.customerId.name) ||
+          'Delivery',
+        amount: item.amount || 0,
+        time: new Date(item.createdAt).toLocaleTimeString([], {
+          hour: 'numeric',
+          minute: '2-digit',
+        }),
+        status: 'completed',
+      }));
+
+      setEarningsData({
+        today: { total: sum(today), deliveries: today.length, hours: 0, tips: tipsOf(today), history },
+        week: { total: sum(week), deliveries: week.length, hours: 0, tips: tipsOf(week), history: [] },
+        month: { total: sum(month), deliveries: month.length, hours: 0, tips: tipsOf(month), history: [] },
+      });
+    } catch (error) {
+      console.warn('Failed to load earnings:', error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const currentData = earningsData[selectedPeriod];
@@ -84,6 +135,11 @@ const EarningsScreen = () => {
         </View>
 
         {/* Earnings Summary */}
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.mint} />
+          </View>
+        ) : (
         <View style={styles.summaryCard}>
           <Text style={styles.summaryLabel}>Total Earnings</Text>
           <Text style={styles.summaryAmount}>${currentData.total.toFixed(2)}</Text>
@@ -105,6 +161,7 @@ const EarningsScreen = () => {
             </View>
           </View>
         </View>
+        )}
 
         {/* Earnings Breakdown */}
         <View style={styles.section}>
@@ -237,6 +294,13 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius['2xl'],
     padding: spacing['2xl'],
     ...elevation.glow,
+  },
+  loadingContainer: {
+    margin: spacing.lg,
+    padding: spacing['3xl'],
+    backgroundColor: colors.surfaceCard,
+    borderRadius: borderRadius['2xl'],
+    alignItems: 'center',
   },
   summaryLabel: {
     fontSize: typography.fontSize.sm,

@@ -1,15 +1,14 @@
-import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors, spacing, borderRadius, elevation, typography } from '../../theme/theme';
 import Button from '../../components/Button';
+import { showAlert } from '../../utils/alerts';
 
 const DeliveryDetailScreen = () => {
   const navigation = useNavigation();
@@ -18,21 +17,18 @@ const DeliveryDetailScreen = () => {
 
   const statusSteps = [
     { key: 'assigned', label: 'Assigned' },
-    { key: 'arrived_pickup', label: 'Arrived Pickup' },
     { key: 'picked_up', label: 'Picked Up' },
     { key: 'in_transit', label: 'In Transit' },
-    { key: 'arrived_dropoff', label: 'Arrived' },
     { key: 'delivered', label: 'Delivered' },
   ];
 
   const getCurrentStepIndex = () => {
     const statusMap = {
       'assigned': 0,
-      'arrived_pickup': 1,
-      'picked_up': 2,
-      'in_transit': 3,
-      'arrived_dropoff': 4,
-      'delivered': 5,
+      'accepted': 0,
+      'picked_up': 1,
+      'in_transit': 2,
+      'delivered': 3,
     };
     return statusMap[delivery?.status] || 0;
   };
@@ -42,11 +38,11 @@ const DeliveryDetailScreen = () => {
   };
 
   const handleCallCustomer = () => {
-    Alert.alert('Call Customer', `Calling ${delivery?.customerName}...`);
+    showAlert('Call Customer', `Calling ${delivery?.customerName}...`);
   };
 
   const handleNavigate = (address) => {
-    Alert.alert('Navigation', `Opening navigation to: ${address}`);
+    showAlert('Navigation', `Opening navigation to: ${address}`);
   };
 
   return (

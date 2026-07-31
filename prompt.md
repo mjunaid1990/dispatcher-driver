@@ -14,6 +14,7 @@ Proof of delivery: photo upload and signature capture.
 Offline support: cache active deliveries and sync on reconnect.
 Push notifications for new orders.
 Earnings and trip history.
+
 Phase 2: Mobile Customer App
 Customer signup/login.
 Place delivery request with pickup and drop-off addresses.
@@ -22,6 +23,7 @@ Live order status updates.
 Order history, reorder, and receipts.
 In-app chat or call with driver.
 Rating and feedback after delivery.
+
 Phase 3: Web Dispatcher Dashboard
 Admin/dispatcher login with role-based access.
 Live map of all active drivers.
@@ -45,6 +47,7 @@ Delivery status lifecycle.
 Notifications (push, SMS, email).
 Ratings and reviews.
 Analytics and reporting.
+
 Design
 Mobile-first, clean, and modern UI.
 Consistent design system across all apps.

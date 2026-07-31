@@ -1,74 +1,132 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Alert,
   TextInput,
+  Modal,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, borderRadius, elevation, typography } from '../../theme/theme';
+import api from '../../api/client';
+import { showAlert } from '../../utils/alerts';
+import SignaturePad from '../../components/SignaturePad';
+import SignaturePreview from '../../components/SignaturePreview';
+import StatusPill from '../../components/StatusPill';
+import Button from '../../components/Button';
+import Toast from '../../components/Toast';
 
 const DeliveryStatusScreen = () => {
   const navigation = useNavigation();
   const route = useRoute();
   const { delivery } = route.params || {};
+  const { driverInfo, userInfo } = useAuth();
   const [notes, setNotes] = useState('');
-  const [photoUploaded, setPhotoUploaded] = useState(false);
   const [signatureCaptured, setSignatureCaptured] = useState(false);
+  const [signatureUrl, setSignatureUrl] = useState(null);
+  const [signatureStrokes, setSignatureStrokes] = useState([]);
+  const [signatureModalVisible, setSignatureModalVisible] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState(null);
+  const signaturePadRef = useRef(null);
+
+  const showToast = (type, message) => {
+    setToast({ type, message, key: Date.now() });
+  };
+
+  const resolveDriverId = async () => {
+    if (driverInfo?._id) return driverInfo._id;
+    try {
+      const res = await api.get('/drivers', { params: { userId: userInfo?._id } });
+      return res.data[0]?._id || null;
+    } catch (error) {
+      return null;
+    }
+  };
 
   const statusOptions = [
-    { key: 'arrived_pickup', label: 'Arrived at Pickup', color: colors.warning },
     { key: 'picked_up', label: 'Picked Up', color: colors.mint },
     { key: 'in_transit', label: 'In Transit', color: colors.info },
-    { key: 'arrived_dropoff', label: 'Arrived at Drop-off', color: colors.glow },
     { key: 'delivered', label: 'Delivered', color: colors.success },
     { key: 'failed', label: 'Failed Delivery', color: colors.error },
   ];
 
-  const handleStatusUpdate = (status) => {
-    if (status === 'delivered') {
-      if (!photoUploaded) {
-        Alert.alert('Photo Required', 'Please upload a proof of delivery photo');
-        return;
-      }
-      if (!signatureCaptured) {
-        Alert.alert('Signature Required', 'Please capture customer signature');
-        return;
-      }
-    }
-
-    Alert.alert(
-      'Update Status',
-      `Change status to "${statusOptions.find(s => s.key === status)?.label}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm',
-          onPress: () => {
-            // TODO: Call API to update status
-            Alert.alert('Success', 'Delivery status updated successfully');
-            navigation.goBack();
-          },
-        },
-      ]
-    );
-  };
-
-  const handleUploadPhoto = () => {
-    Alert.alert('Upload Photo', 'Photo upload feature - integrate with expo-image-picker');
-    setPhotoUploaded(true);
-  };
-
   const handleCaptureSignature = () => {
-    Alert.alert('Capture Signature', 'Signature capture feature - integrate with react-native-signature-canvas');
-    setSignatureCaptured(true);
+    setSignatureModalVisible(true);
   };
 
-  const getCurrentStatus = () => {
-    return statusOptions.find(s => s.key === delivery?.status) || statusOptions[0];
+  const handleConfirmSignature = () => {
+    const dataUrl = signaturePadRef.current?.capture();
+    if (!dataUrl) {
+      showAlert('Error', 'Please draw your signature first');
+      return;
+    }
+    setSignatureUrl(dataUrl);
+    setSignatureStrokes(signaturePadRef.current?.getStrokes() || []);
+    setSignatureCaptured(true);
+    setSignatureModalVisible(false);
+  };
+
+  const handleClearSignature = () => {
+    signaturePadRef.current?.clear();
+  };
+
+  const handleSave = async () => {
+    if (!selectedStatus && !signatureCaptured && !notes.trim()) {
+      showToast('error', 'Please select a status or capture a signature');
+      return;
+    }
+    if (selectedStatus === 'delivered' && !signatureCaptured) {
+      showToast('error', 'Please capture the customer signature first');
+      return;
+    }
+    const orderId = delivery?.order?._id || delivery?.id;
+    if (!orderId) {
+      showToast('error', 'Order not found');
+      return;
+    }
+    setSaving(true);
+    try {
+      let driverId = null;
+      try {
+        driverId = await resolveDriverId();
+      } catch (error) {}
+
+      const payload = {};
+      if (selectedStatus) {
+        payload.status = selectedStatus;
+        if (selectedStatus === 'delivered') {
+          payload.deliveredAt = new Date().toISOString();
+        }
+        if (selectedStatus === 'failed') {
+          payload.failureReason = notes || 'Delivery failed';
+        }
+      }
+      if (signatureUrl || notes) {
+        payload.proofOfDelivery = {
+          signatureUrl: signatureUrl || undefined,
+          notes,
+          capturedAt: new Date().toISOString(),
+        };
+      }
+      await api.put(`/orders/${orderId}`, payload);
+
+      if (driverId && selectedStatus) {
+        await api
+          .post('/tracking/events', { orderId, driverId, status: selectedStatus, note: notes })
+          .catch(() => {});
+      }
+
+      showToast('success', selectedStatus ? 'Status updated successfully' : 'Proof of delivery saved');
+    } catch (error) {
+      showToast('error', error.response?.data?.message || 'Failed to save');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -86,9 +144,8 @@ const DeliveryStatusScreen = () => {
         {/* Current Status */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Current Status</Text>
-          <View style={[styles.statusCard, { borderLeftColor: getCurrentStatus().color }]}>
-            <Text style={styles.statusLabel}>{getCurrentStatus().label}</Text>
-            <Text style={styles.statusTime}>Updated 5 min ago</Text>
+          <View style={styles.statusCard}>
+            <StatusPill status={delivery?.status} size="md" />
           </View>
         </View>
 
@@ -96,40 +153,42 @@ const DeliveryStatusScreen = () => {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Update To</Text>
           <View style={styles.statusOptions}>
-            {statusOptions.map((option) => (
-              <TouchableOpacity
-                key={option.key}
-                style={[
-                  styles.statusOption,
-                  { borderLeftColor: option.color },
-                ]}
-                onPress={() => handleStatusUpdate(option.key)}
-              >
-                <View style={[styles.statusDot, { backgroundColor: option.color }]} />
-                <Text style={styles.statusOptionLabel}>{option.label}</Text>
-              </TouchableOpacity>
-            ))}
+            {statusOptions.map((option) => {
+              const selected = selectedStatus === option.key;
+              return (
+                <TouchableOpacity
+                  key={option.key}
+                  style={[
+                    styles.statusOption,
+                    { borderLeftColor: option.color },
+                    selected && styles.statusOptionSelected,
+                  ]}
+                  onPress={() => setSelectedStatus(option.key)}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.radioOuter, { borderColor: option.color }]}>
+                    {selected && (
+                      <View style={[styles.radioInner, { backgroundColor: option.color }]} />
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.statusOptionLabel,
+                      selected && styles.statusOptionLabelSelected,
+                    ]}
+                  >
+                    {option.label}
+                  </Text>
+                  {selected && <Text style={[styles.radioCheck, { color: option.color }]}>✓</Text>}
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
         {/* Proof of Delivery */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Proof of Delivery</Text>
-          
-          <TouchableOpacity
-            style={[styles.podCard, photoUploaded && styles.podCardCompleted]}
-            onPress={handleUploadPhoto}
-          >
-            <View style={styles.podIcon}>
-              <Text style={styles.podIconText}>{photoUploaded ? '✓' : '📷'}</Text>
-            </View>
-            <View style={styles.podContent}>
-              <Text style={styles.podTitle}>Delivery Photo</Text>
-              <Text style={styles.podSubtitle}>
-                {photoUploaded ? 'Photo uploaded' : 'Tap to upload photo'}
-              </Text>
-            </View>
-          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.podCard, signatureCaptured && styles.podCardCompleted]}
@@ -145,9 +204,16 @@ const DeliveryStatusScreen = () => {
               </Text>
             </View>
           </TouchableOpacity>
+
+          {signatureCaptured && signatureStrokes.length > 0 && (
+            <View style={styles.signaturePreviewWrap}>
+              <Text style={styles.signaturePreviewLabel}>Captured Signature</Text>
+              <SignaturePreview strokes={signatureStrokes} />
+            </View>
+          )}
         </View>
 
-        {/* Notes */}
+        {/* Notes + Save */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Delivery Notes</Text>
           <View style={styles.notesCard}>
@@ -161,6 +227,15 @@ const DeliveryStatusScreen = () => {
               textAlignVertical="top"
             />
           </View>
+
+          <Button
+            variant="primary"
+            size="lg"
+            title={saving ? 'Saving...' : 'Save'}
+            onPress={handleSave}
+            loading={saving}
+            style={styles.saveButton}
+          />
         </View>
 
         {/* Issue Report */}
@@ -168,7 +243,7 @@ const DeliveryStatusScreen = () => {
           <Text style={styles.sectionTitle}>Report Issue</Text>
           <TouchableOpacity
             style={styles.issueCard}
-            onPress={() => Alert.alert('Report Issue', 'Issue reporting feature coming soon')}
+            onPress={() => showAlert('Report Issue', 'Issue reporting feature coming soon')}
           >
             <Text style={styles.issueTitle}>Report a Problem</Text>
             <Text style={styles.issueSubtitle}>
@@ -177,6 +252,48 @@ const DeliveryStatusScreen = () => {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={signatureModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSignatureModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Capture Signature</Text>
+            <Text style={styles.modalSubtitle}>
+              Please ask the customer to sign below
+            </Text>
+            <SignaturePad ref={signaturePadRef} />
+            <View style={styles.modalActions}>
+              <Button
+                variant="outline"
+                size="md"
+                title="Clear"
+                onPress={handleClearSignature}
+                style={styles.modalButton}
+              />
+              <Button
+                variant="secondary"
+                size="md"
+                title="Cancel"
+                onPress={() => setSignatureModalVisible(false)}
+                style={styles.modalButton}
+              />
+              <Button
+                variant="primary"
+                size="md"
+                title="Confirm"
+                onPress={handleConfirmSignature}
+                style={styles.modalButton}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {toast && <Toast key={toast.key} type={toast.type} message={toast.message} />}
     </View>
   );
 };
@@ -222,17 +339,8 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     padding: spacing.lg,
     borderLeftWidth: 4,
+    borderLeftColor: colors.mint,
     ...elevation.md,
-  },
-  statusLabel: {
-    fontSize: typography.fontSize.lg,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.text,
-    marginBottom: spacing.xs,
-  },
-  statusTime: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
   },
   statusOptions: {
     gap: spacing.sm,
@@ -246,16 +354,37 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     ...elevation.md,
   },
-  statusDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+  statusOptionSelected: {
+    borderWidth: 1,
+    borderColor: colors.mint,
+    backgroundColor: colors.surfaceElevated,
+  },
+  radioOuter: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: spacing.md,
   },
+  radioInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
   statusOptionLabel: {
+    flex: 1,
     fontSize: typography.fontSize.base,
     fontWeight: typography.fontWeight.medium,
     color: colors.text,
+  },
+  statusOptionLabelSelected: {
+    fontWeight: typography.fontWeight.semibold,
+  },
+  radioCheck: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.bold,
   },
   podCard: {
     backgroundColor: colors.surfaceCard,
@@ -295,6 +424,15 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.textSecondary,
   },
+  signaturePreviewWrap: {
+    marginTop: spacing.sm,
+  },
+  signaturePreviewLabel: {
+    fontSize: typography.fontSize.xs,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+  },
   notesCard: {
     backgroundColor: colors.surfaceCard,
     borderRadius: borderRadius.lg,
@@ -305,6 +443,9 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.text,
     minHeight: 100,
+  },
+  saveButton: {
+    marginTop: spacing.lg,
   },
   issueCard: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -322,6 +463,40 @@ const styles = StyleSheet.create({
   issueSubtitle: {
     fontSize: typography.fontSize.sm,
     color: 'rgba(239, 68, 68, 0.8)',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(13, 27, 42, 0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 480,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: borderRadius['2xl'],
+    padding: spacing['2xl'],
+    ...elevation.xl,
+  },
+  modalTitle: {
+    fontSize: typography.fontSize.lg,
+    fontWeight: typography.fontWeight.bold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  modalSubtitle: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    marginBottom: spacing.lg,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  modalButton: {
+    flex: 1,
   },
 });
 

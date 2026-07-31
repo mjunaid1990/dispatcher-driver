@@ -5,17 +5,19 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, borderRadius, elevation, typography } from '../../theme/theme';
+import { colors, spacing, borderRadius, typography } from '../../theme/theme';
 import Button from '../../components/Button';
+import api from '../../api/client';
+import { showAlert } from '../../utils/alerts';
 
 const SignupScreen = () => {
+  const [role, setRole] = useState('driver');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -25,38 +27,61 @@ const SignupScreen = () => {
   const { login } = useAuth();
   const navigation = useNavigation();
 
+  const ROLES = [
+    { key: 'driver', label: 'Driver', icon: '🚗' },
+    { key: 'customer', label: 'Customer', icon: '🛍️' },
+  ];
+
   const handleSignup = async () => {
     if (!name || !email || !phone || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showAlert('Error', 'Please fill in all fields');
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showAlert('Error', 'Passwords do not match');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      showAlert('Error', 'Password must be at least 6 characters');
       return;
     }
 
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // Simulating API response
-      const mockToken = 'mock-jwt-token';
-      const mockUser = {
-        id: '1',
-        email: email,
-        name: name,
-        role: 'driver',
-        phone: phone,
-      };
+      const userRes = await api.post('/users', { name, email, phone, password, role });
+      const user = userRes.data;
 
-      await login(mockToken, mockUser);
+      if (role === 'driver') {
+        try {
+          await api.post('/drivers', { userId: user._id });
+        } catch (driverError) {
+          console.warn('Driver profile creation failed:', driverError.response?.data || driverError.message);
+        }
+      } else {
+        try {
+          await api.post('/customers', { userId: user._id });
+        } catch (customerError) {
+          console.warn('Customer profile creation failed:', customerError.response?.data || customerError.message);
+        }
+      }
+
+      const loginRes = await api.post('/users/login', { email, password });
+      const { token } = loginRes.data;
+
+      let driver = null;
+      if (role === 'driver') {
+        try {
+          const driverRes = await api.get('/drivers', { params: { userId: user._id } });
+          driver = driverRes.data[0] || null;
+        } catch (driverError) {}
+      }
+
+      await login(token, user, driver);
     } catch (error) {
-      Alert.alert('Signup Failed', error.message);
+      const message = error.response?.data?.message || error.message || 'Signup failed';
+      showAlert('Signup Failed', message);
     } finally {
       setLoading(false);
     }
@@ -69,11 +94,29 @@ const SignupScreen = () => {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>Driver Sign Up</Text>
-          <Text style={styles.subtitle}>Create your driver account</Text>
+          <Text style={styles.title}>Sign Up</Text>
+          <Text style={styles.subtitle}>Create your account</Text>
         </View>
 
         <View style={styles.form}>
+          <View style={styles.inputContainer}>
+            <Text style={styles.label}>I am a</Text>
+            <View style={styles.roleRow}>
+              {ROLES.map((r) => (
+                <TouchableOpacity
+                  key={r.key}
+                  style={[styles.roleCard, role === r.key && styles.roleCardActive]}
+                  onPress={() => setRole(r.key)}
+                >
+                  <Text style={styles.roleIcon}>{r.icon}</Text>
+                  <Text style={[styles.roleText, role === r.key && styles.roleTextActive]}>
+                    {r.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Full Name</Text>
             <TextInput
@@ -214,6 +257,35 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.mint,
     fontWeight: typography.fontWeight.semibold,
+  },
+  roleRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  roleCard: {
+    flex: 1,
+    alignItems: 'center',
+    padding: spacing.lg,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderRadius: borderRadius.lg,
+  },
+  roleCardActive: {
+    borderColor: colors.mint,
+    backgroundColor: colors.surfaceElevated,
+  },
+  roleIcon: {
+    fontSize: typography.fontSize['3xl'],
+    marginBottom: spacing.sm,
+  },
+  roleText: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.textSecondary,
+  },
+  roleTextActive: {
+    color: colors.mint,
   },
 });
 
