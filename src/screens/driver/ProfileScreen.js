@@ -12,10 +12,9 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, elevation, typography } from '../../theme/theme';
 import Button from '../../components/Button';
 import { useDriver } from '../../hooks/useDriver';
-import { confirmAction } from '../../utils/alerts';
 
 const ProfileScreen = () => {
-  const { userInfo, logout } = useAuth();
+  const { userInfo } = useAuth();
   const { driver, loading } = useDriver();
   const navigation = useNavigation();
 
@@ -34,15 +33,6 @@ const ProfileScreen = () => {
     if (item.screen) {
       navigation.navigate(item.screen);
     }
-  };
-
-  const handleLogout = () => {
-    confirmAction(
-      'Logout',
-      'Are you sure you want to logout?',
-      () => logout(),
-      { confirmText: 'Logout', destructive: true }
-    );
   };
 
   return (
@@ -116,16 +106,6 @@ const ProfileScreen = () => {
               <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
             </TouchableOpacity>
           ))}
-        </View>
-
-        {/* Logout Button */}
-        <View style={styles.logoutSection}>
-          <Button
-            variant="destructive"
-            size="md"
-            title="Logout"
-            onPress={handleLogout}
-          />
         </View>
 
         {/* App Version */}
@@ -256,10 +236,6 @@ const styles = StyleSheet.create({
   menuLabel: {
     fontSize: typography.fontSize.base,
     color: colors.text,
-  },
-  logoutSection: {
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.lg,
   },
   versionSection: {
     padding: spacing.lg,

@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, typography, elevation } from '../../theme/theme';
+import ScreenHeader from '../../components/ScreenHeader';
 import FormField from '../../components/FormField';
 import Button from '../../components/Button';
 import api from '../../api/client';
@@ -35,6 +36,15 @@ const NewOrderScreen = () => {
 
   const setPickupField = (key, value) => setPickup((prev) => ({ ...prev, [key]: value }));
   const setDropoffField = (key, value) => setDropoff((prev) => ({ ...prev, [key]: value }));
+
+  const resetForm = () => {
+    setPickup({ line: '', contactName: '', contactPhone: '', lat: '', lng: '' });
+    setDropoff({ line: '', contactName: '', contactPhone: '', lat: '', lng: '' });
+    setItems([{ name: '', qty: '1' }]);
+    setPackageSize('medium');
+    setPriority('normal');
+    setCodAmount('');
+  };
 
   const updateItem = (index, key, value) =>
     setItems((prev) => prev.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
@@ -112,6 +122,7 @@ const NewOrderScreen = () => {
         status: 'pending',
       };
       const res = await api.post('/orders', payload);
+      resetForm();
       showAlert('Success', `Order ${res.data.orderNumber} placed successfully`);
       navigation.navigate('OrderDetail', { orderId: res.data._id });
     } catch (error) {
@@ -138,16 +149,13 @@ const NewOrderScreen = () => {
   );
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <View style={styles.header}>
-        <Text style={styles.greeting}>Hello, {userInfo?.name?.split(' ')[0] || 'there'}</Text>
-        <Text style={styles.subtitle}>Where should we send your package?</Text>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
+    <View style={styles.container}>
+      <ScreenHeader title="New Order" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.flex}
+      >
+        <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Pickup</Text>
           <FormField label="Address" value={pickup.line} onChangeText={(v) => setPickupField('line', v)} placeholder="e.g. 45 Mall Road, Lahore" />
@@ -241,7 +249,8 @@ const NewOrderScreen = () => {
           style={styles.submit}
         />
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </View>
   );
 };
 
@@ -250,21 +259,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.base,
   },
-  header: {
-    padding: spacing.lg,
-    backgroundColor: colors.surfaceCard,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  greeting: {
-    fontSize: typography.fontSize['2xl'],
-    fontWeight: typography.fontWeight.bold,
-    color: colors.text,
-  },
-  subtitle: {
-    fontSize: typography.fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
+  flex: {
+    flex: 1,
   },
   content: {
     padding: spacing.lg,

@@ -14,6 +14,7 @@ import DeliveryStatusScreen from '../screens/driver/DeliveryStatusScreen';
 
 // Customer Screens
 import CustomerTabs from './CustomerTabs';
+import NewOrderScreen from '../screens/customer/NewOrderScreen';
 import CustomerOrderDetailScreen from '../screens/customer/OrderDetailScreen';
 import RateOrderScreen from '../screens/customer/RateOrderScreen';
 
@@ -58,6 +59,7 @@ const AppNavigator = () => {
       ) : userInfo?.role === 'customer' ? (
         <>
           <Stack.Screen name="CustomerTabs" component={CustomerTabs} />
+          <Stack.Screen name="NewOrder" component={NewOrderScreen} />
           <Stack.Screen name="OrderDetail" component={CustomerOrderDetailScreen} />
           <Stack.Screen name="RateOrder" component={RateOrderScreen} />
         </>

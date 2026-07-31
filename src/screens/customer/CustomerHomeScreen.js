@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,8 +8,9 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, typography, elevation } from '../../theme/theme';
 import StatusPill from '../../components/StatusPill';
 import Button from '../../components/Button';
@@ -17,7 +18,7 @@ import api from '../../api/client';
 import { mapOrderToCustomer } from '../../api/mappers';
 import { showAlert, confirmAction } from '../../utils/alerts';
 
-const OrdersScreen = () => {
+const CustomerHomeScreen = () => {
   const navigation = useNavigation();
   const { userInfo } = useAuth();
   const [orders, setOrders] = useState([]);
@@ -35,9 +36,11 @@ const OrdersScreen = () => {
     }
   }, [userInfo]);
 
-  useEffect(() => {
-    loadOrders();
-  }, [loadOrders]);
+  useFocusEffect(
+    useCallback(() => {
+      loadOrders();
+    }, [loadOrders])
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -119,7 +122,17 @@ const OrdersScreen = () => {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>My Orders</Text>
+        <View>
+          <Text style={styles.greeting}>Hello, {userInfo?.name?.split(' ')[0] || 'there'}</Text>
+          <Text style={styles.subtitle}>Your deliveries</Text>
+        </View>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => navigation.navigate('NewOrder')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={24} color={colors.textInverse} />
+        </TouchableOpacity>
       </View>
 
       {loading ? (
@@ -133,7 +146,19 @@ const OrdersScreen = () => {
           renderItem={renderItem}
           contentContainerStyle={styles.list}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={<Text style={styles.empty}>No orders yet. Place your first delivery!</Text>}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Ionicons name="cube-outline" size={48} color={colors.textTertiary} />
+              <Text style={styles.empty}>No orders yet. Place your first delivery!</Text>
+              <Button
+                variant="primary"
+                size="md"
+                title="New Order"
+                onPress={() => navigation.navigate('NewOrder')}
+                style={styles.emptyBtn}
+              />
+            </View>
+          }
         />
       )}
     </View>
@@ -146,15 +171,32 @@ const styles = StyleSheet.create({
     backgroundColor: colors.base,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     padding: spacing.lg,
     backgroundColor: colors.surfaceCard,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
-  title: {
+  greeting: {
     fontSize: typography.fontSize['2xl'],
     fontWeight: typography.fontWeight.bold,
     color: colors.text,
+  },
+  subtitle: {
+    fontSize: typography.fontSize.sm,
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+  },
+  addButton: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.mint,
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...elevation.glow,
   },
   center: {
     flex: 1,
@@ -163,12 +205,22 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: spacing.lg,
+    flexGrow: 1,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: spacing['6xl'],
   },
   empty: {
     textAlign: 'center',
     color: colors.textTertiary,
     fontSize: typography.fontSize.base,
-    marginTop: spacing['4xl'],
+    marginTop: spacing.lg,
+  },
+  emptyBtn: {
+    marginTop: spacing.lg,
   },
   card: {
     backgroundColor: colors.surfaceCard,
@@ -239,4 +291,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default OrdersScreen;
+export default CustomerHomeScreen;

@@ -10,10 +10,10 @@ import { colors, spacing, borderRadius, typography, elevation } from '../../them
 import FormField from '../../components/FormField';
 import Button from '../../components/Button';
 import api from '../../api/client';
-import { showAlert, confirmAction } from '../../utils/alerts';
+import { showAlert } from '../../utils/alerts';
 
 const CustomerProfileScreen = () => {
-  const { userInfo, updateUser, logout } = useAuth();
+  const { userInfo, updateUser } = useAuth();
   const [name, setName] = useState(userInfo?.name || '');
   const [email, setEmail] = useState(userInfo?.email || '');
   const [phone, setPhone] = useState(userInfo?.phone || '');
@@ -34,13 +34,6 @@ const CustomerProfileScreen = () => {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleLogout = () => {
-    confirmAction('Logout', 'Are you sure you want to logout?', () => logout(), {
-      confirmText: 'Logout',
-      destructive: true,
-    });
   };
 
   return (
@@ -92,8 +85,6 @@ const CustomerProfileScreen = () => {
             loading={saving}
           />
         </View>
-
-        <Button variant="destructive" size="md" title="Logout" onPress={handleLogout} />
 
         <View style={styles.versionSection}>
           <Text style={styles.versionText}>Dispatcher App v1.0.0</Text>

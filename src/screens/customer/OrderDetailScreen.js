@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, typography, elevation } from '../../theme/theme';
 import ScreenHeader from '../../components/ScreenHeader';
@@ -38,7 +38,7 @@ const OrderDetailScreen = ({ route }) => {
   const [rated, setRated] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (silent = false) => {
     if (!orderId) return;
     try {
       const [orderRes, eventsRes, ratingsRes] = await Promise.all([
@@ -50,15 +50,21 @@ const OrderDetailScreen = ({ route }) => {
       setEvents((eventsRes.data || []).slice().reverse());
       setRated((ratingsRes.data || []).length > 0);
     } catch (error) {
-      showAlert('Error', error.response?.data?.message || 'Failed to load order');
+      if (!silent) {
+        showAlert('Error', error.response?.data?.message || 'Failed to load order');
+      }
     } finally {
       setLoading(false);
     }
   }, [orderId]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+      const interval = setInterval(() => loadData(true), 5000);
+      return () => clearInterval(interval);
+    }, [loadData])
+  );
 
   const handleCallDriver = () => {
     const phone = order?.driver?.phone;
@@ -85,6 +91,36 @@ const OrderDetailScreen = ({ route }) => {
         }
       },
       { confirmText: 'Cancel Order', destructive: true }
+    );
+  };
+
+  const handleReorder = () => {
+    confirmAction(
+      'Reorder',
+      `Place a new order matching ${order.orderNumber}?`,
+      async () => {
+        try {
+          const src = order.order;
+          const payload = {
+            orderNumber: `ORD-${Date.now()}`,
+            customerId: userInfo._id,
+            pickup: src.pickup,
+            dropoff: src.dropoff,
+            items: src.items || [],
+            packageSize: src.packageSize || 'medium',
+            codAmount: src.codAmount || 0,
+            priority: src.priority || 'normal',
+            pricing: src.pricing,
+            status: 'pending',
+          };
+          const res = await api.post('/orders', payload);
+          showAlert('Success', `New order ${res.data.orderNumber} placed`);
+          navigation.replace('OrderDetail', { orderId: res.data._id });
+        } catch (error) {
+          showAlert('Error', error.response?.data?.message || 'Failed to reorder');
+        }
+      },
+      { confirmText: 'Reorder' }
     );
   };
 
@@ -175,10 +211,27 @@ const OrderDetailScreen = ({ route }) => {
               {order.distanceKm} km · ~{order.estimatedDurationMin} min
             </Text>
           )}
-          {!!order.driver?.name && (
-            <View style={styles.driverRow}>
-              <Ionicons name="person-circle-outline" size={20} color={colors.mint} />
-              <Text style={styles.driverText}>Driver: {order.driver.name}</Text>
+          {order.etaAt && (
+            <Text style={styles.etaText}>
+              ETA: {new Date(order.etaAt).toLocaleString()}
+            </Text>
+          )}
+          {!!order.driver?.phone && (
+            <View style={styles.driverCard}>
+              <Ionicons name="person-circle-outline" size={24} color={colors.mint} />
+              <View style={styles.driverInfo}>
+                <Text style={styles.driverName}>
+                  {order.driver.name || 'Driver'}
+                  {order.driver.rating ? ` · ${Number(order.driver.rating).toFixed(1)} ★` : ''}
+                </Text>
+                <Text
+                  href={`tel:${order.driver.phone}`}
+                  onPress={handleCallDriver}
+                  style={styles.phoneLink}
+                >
+                  <Ionicons name="call" size={14} color={colors.mint} /> {order.driver.phone}
+                </Text>
+              </View>
             </View>
           )}
         </View>
@@ -228,6 +281,16 @@ const OrderDetailScreen = ({ route }) => {
               title="Rate Driver"
               icon={<Ionicons name="star" size={18} color={colors.textInverse} />}
               onPress={() => navigation.navigate('RateOrder', { orderId: order.id })}
+              style={styles.actionBtn}
+            />
+          )}
+          {order.status === 'delivered' && (
+            <Button
+              variant="secondary"
+              size="md"
+              title="Reorder"
+              icon={<Ionicons name="refresh" size={18} color={colors.text} />}
+              onPress={handleReorder}
               style={styles.actionBtn}
             />
           )}
@@ -378,16 +441,29 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginBottom: spacing.sm,
   },
-  driverRow: {
+  driverCard: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: spacing.sm,
+    backgroundColor: colors.surfaceElevated,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
   },
-  driverText: {
+  driverInfo: {
+    flex: 1,
+    marginLeft: spacing.md,
+  },
+  driverName: {
+    fontSize: typography.fontSize.base,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.text,
+    marginBottom: spacing.xs,
+  },
+  phoneLink: {
     fontSize: typography.fontSize.sm,
     color: colors.mint,
     fontWeight: typography.fontWeight.semibold,
-    marginLeft: spacing.sm,
+    textDecorationLine: 'underline',
   },
   receiptRow: {
     flexDirection: 'row',
@@ -417,6 +493,12 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.xs,
     color: colors.warning,
     marginTop: spacing.sm,
+  },
+  etaText: {
+    fontSize: typography.fontSize.sm,
+    fontWeight: typography.fontWeight.semibold,
+    color: colors.mint,
+    marginBottom: spacing.sm,
   },
   actions: {
     flexDirection: 'row',

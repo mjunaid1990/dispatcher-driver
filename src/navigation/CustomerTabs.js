@@ -2,17 +2,17 @@ import React from 'react';
 import { StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import NewOrderScreen from '../screens/customer/NewOrderScreen';
-import OrdersScreen from '../screens/customer/OrdersScreen';
+import CustomerHomeScreen from '../screens/customer/CustomerHomeScreen';
 import CustomerProfileScreen from '../screens/customer/CustomerProfileScreen';
+import LogoutTab from '../components/LogoutTab';
 import { colors, typography } from '../theme/theme';
 
 const Tab = createBottomTabNavigator();
 
 const icons = {
-  Home: { active: 'add-circle', inactive: 'add-circle-outline' },
-  Orders: { active: 'receipt', inactive: 'receipt-outline' },
+  Home: { active: 'home', inactive: 'home-outline' },
   Profile: { active: 'person', inactive: 'person-outline' },
+  Logout: { active: 'log-out', inactive: 'log-out-outline' },
 };
 
 const CustomerTabs = () => (
@@ -35,9 +35,9 @@ const CustomerTabs = () => (
       },
     })}
   >
-    <Tab.Screen name="Home" component={NewOrderScreen} />
-    <Tab.Screen name="Orders" component={OrdersScreen} />
+    <Tab.Screen name="Home" component={CustomerHomeScreen} />
     <Tab.Screen name="Profile" component={CustomerProfileScreen} />
+    <Tab.Screen name="Logout" component={LogoutTab} />
   </Tab.Navigator>
 );
 

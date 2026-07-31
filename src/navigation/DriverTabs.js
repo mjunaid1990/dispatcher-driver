@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import DriverHomeScreen from '../screens/driver/DriverHomeScreen';
 import EarningsScreen from '../screens/driver/EarningsScreen';
 import ProfileScreen from '../screens/driver/ProfileScreen';
+import LogoutTab from '../components/LogoutTab';
 import { colors, typography } from '../theme/theme';
 
 const Tab = createBottomTabNavigator();
@@ -13,6 +14,7 @@ const icons = {
   Home: { active: 'home', inactive: 'home-outline' },
   Earnings: { active: 'wallet', inactive: 'wallet-outline' },
   Profile: { active: 'person', inactive: 'person-outline' },
+  Logout: { active: 'log-out', inactive: 'log-out-outline' },
 };
 
 const DriverTabs = () => (
@@ -38,6 +40,7 @@ const DriverTabs = () => (
     <Tab.Screen name="Home" component={DriverHomeScreen} />
     <Tab.Screen name="Earnings" component={EarningsScreen} />
     <Tab.Screen name="Profile" component={ProfileScreen} />
+    <Tab.Screen name="Logout" component={LogoutTab} />
   </Tab.Navigator>
 );
 
