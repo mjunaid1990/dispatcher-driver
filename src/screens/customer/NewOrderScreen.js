@@ -16,6 +16,8 @@ import FormField from '../../components/FormField';
 import Button from '../../components/Button';
 import api from '../../api/client';
 import { showAlert } from '../../utils/alerts';
+import { CURRENCY_CODE } from '../../config';
+import { formatCurrency } from '../../utils/currency';
 
 const SIZES = ['small', 'medium', 'large'];
 const PRIORITIES = ['normal', 'express'];
@@ -117,7 +119,7 @@ const NewOrderScreen = () => {
           surge: priority === 'express' ? 2 : 0,
           tip: 0,
           total: estimateTotal(),
-          currency: 'USD',
+          currency: CURRENCY_CODE,
         },
         status: 'pending',
       };
@@ -234,7 +236,7 @@ const NewOrderScreen = () => {
 
         <View style={styles.estimateCard}>
           <Text style={styles.estimateLabel}>Estimated Total</Text>
-          <Text style={styles.estimateValue}>${estimateTotal().toFixed(2)}</Text>
+          <Text style={styles.estimateValue}>{formatCurrency(estimateTotal())}</Text>
           <Text style={styles.estimateHint}>
             Base + item fees{priority === 'express' ? ' + express surge' : ''} + COD
           </Text>

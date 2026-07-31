@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, elevation, typography } from '../../theme/theme';
 import Button from '../../components/Button';
 import { useDriver } from '../../hooks/useDriver';
+import { formatCurrency } from '../../utils/currency';
 
 const ProfileScreen = () => {
   const { userInfo } = useAuth();
@@ -83,7 +84,7 @@ const ProfileScreen = () => {
               <View style={styles.statusDivider} />
               <View style={styles.statusItem}>
                 <Text style={styles.statusValue}>
-                  ${Number(driver?.earningsBalance ?? 0).toFixed(2)}
+                  {formatCurrency(driver?.earningsBalance ?? 0)}
                 </Text>
                 <Text style={styles.statusLabel}>Balance</Text>
               </View>

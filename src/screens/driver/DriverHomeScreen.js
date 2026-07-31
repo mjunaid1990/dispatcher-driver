@@ -16,6 +16,7 @@ import Button from '../../components/Button';
 import api from '../../api/client';
 import { mapOrderToDelivery, mapAssignmentToDelivery, ACTIVE_STATUSES } from '../../api/mappers';
 import { showAlert, confirmAction } from '../../utils/alerts';
+import { formatCurrency } from '../../utils/currency';
 
 const DriverHomeScreen = () => {
   const navigation = useNavigation();
@@ -164,7 +165,7 @@ const DriverHomeScreen = () => {
         </View>
       </View>
       <View style={styles.cardFooter}>
-        <Text style={styles.earnings}>${item.earnings.toFixed(2)}</Text>
+        <Text style={styles.earnings}>{formatCurrency(item.earnings)}</Text>
         <Text style={styles.eta}>{item.estimatedTime}</Text>
       </View>
     </TouchableOpacity>
@@ -187,7 +188,7 @@ const DriverHomeScreen = () => {
         </View>
       </View>
       <View style={styles.cardFooter}>
-        <Text style={styles.earnings}>${item.earnings.toFixed(2)}</Text>
+        <Text style={styles.earnings}>{formatCurrency(item.earnings)}</Text>
         <Text style={styles.eta}>{item.estimatedTime}</Text>
       </View>
       <View style={styles.actionButtons}>

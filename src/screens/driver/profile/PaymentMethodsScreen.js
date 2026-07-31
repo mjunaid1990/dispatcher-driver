@@ -12,6 +12,7 @@ import { useDriver } from '../../../hooks/useDriver';
 import ScreenHeader from '../../../components/ScreenHeader';
 import { colors, spacing, borderRadius, typography, elevation } from '../../../theme/theme';
 import { showAlert } from '../../../utils/alerts';
+import { formatCurrency } from '../../../utils/currency';
 
 const payoutStatusColors = {
   pending: colors.warning,
@@ -54,7 +55,7 @@ const PaymentMethodsScreen = () => {
   const renderPayout = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
-        <Text style={styles.amount}>${Number(item.amount || 0).toFixed(2)}</Text>
+        <Text style={styles.amount}>{formatCurrency(item.amount || 0)}</Text>
         <Text style={[styles.status, { color: payoutStatusColors[item.status] || colors.textSecondary }]}>
           {(item.status || 'pending').toUpperCase()}
         </Text>
@@ -74,7 +75,7 @@ const PaymentMethodsScreen = () => {
       <View style={styles.balanceCard}>
         <Text style={styles.balanceLabel}>Available Balance</Text>
         <Text style={styles.balanceAmount}>
-          ${Number(driver?.earningsBalance ?? 0).toFixed(2)}
+          {formatCurrency(driver?.earningsBalance ?? 0)}
         </Text>
         <Text style={styles.balanceHint}>Payouts are processed weekly</Text>
       </View>

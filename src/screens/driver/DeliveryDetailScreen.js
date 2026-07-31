@@ -9,6 +9,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { colors, spacing, borderRadius, elevation, typography } from '../../theme/theme';
 import Button from '../../components/Button';
 import { showAlert } from '../../utils/alerts';
+import { formatCurrency } from '../../utils/currency';
 
 const DeliveryDetailScreen = () => {
   const navigation = useNavigation();
@@ -153,7 +154,7 @@ const DeliveryDetailScreen = () => {
           <View style={styles.infoCard}>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Earnings</Text>
-              <Text style={styles.infoValue}>${delivery?.earnings?.toFixed(2)}</Text>
+              <Text style={styles.infoValue}>{formatCurrency(delivery?.earnings)}</Text>
             </View>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Estimated Time</Text>

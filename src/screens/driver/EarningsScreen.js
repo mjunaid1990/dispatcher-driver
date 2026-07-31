@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import { colors, spacing, borderRadius, elevation, typography } from '../../theme/theme';
 import Button from '../../components/Button';
 import api from '../../api/client';
+import { formatCurrency } from '../../utils/currency';
 
 const emptyPeriod = { total: 0, deliveries: 0, hours: 0, tips: 0, history: [] };
 
@@ -142,7 +143,7 @@ const EarningsScreen = () => {
         ) : (
         <View style={styles.summaryCard}>
           <Text style={styles.summaryLabel}>Total Earnings</Text>
-          <Text style={styles.summaryAmount}>${currentData.total.toFixed(2)}</Text>
+          <Text style={styles.summaryAmount}>{formatCurrency(currentData.total)}</Text>
           
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
@@ -156,7 +157,7 @@ const EarningsScreen = () => {
             </View>
             <View style={styles.statDivider} />
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>${currentData.tips.toFixed(2)}</Text>
+              <Text style={styles.statValue}>{formatCurrency(currentData.tips)}</Text>
               <Text style={styles.statLabel}>Tips</Text>
             </View>
           </View>
@@ -170,20 +171,20 @@ const EarningsScreen = () => {
             <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>Base Pay</Text>
               <Text style={styles.breakdownValue}>
-                ${(currentData.total - currentData.tips).toFixed(2)}
+                {formatCurrency(currentData.total - currentData.tips)}
               </Text>
             </View>
             <View style={styles.breakdownRow}>
               <Text style={styles.breakdownLabel}>Tips</Text>
               <Text style={[styles.breakdownValue, styles.breakdownValuePositive]}>
-                +${currentData.tips.toFixed(2)}
+                +{formatCurrency(currentData.tips)}
               </Text>
             </View>
             <View style={styles.breakdownDivider} />
             <View style={styles.breakdownRow}>
               <Text style={[styles.breakdownLabel, styles.breakdownLabelTotal]}>Total</Text>
               <Text style={[styles.breakdownValue, styles.breakdownValueTotal]}>
-                ${currentData.total.toFixed(2)}
+                {formatCurrency(currentData.total)}
               </Text>
             </View>
           </View>
@@ -200,7 +201,7 @@ const EarningsScreen = () => {
                   <Text style={styles.historyTime}>{item.time}</Text>
                 </View>
                 <View style={styles.historyRight}>
-                  <Text style={styles.historyAmount}>${item.amount.toFixed(2)}</Text>
+                  <Text style={styles.historyAmount}>{formatCurrency(item.amount)}</Text>
                   <View style={[
                     styles.historyStatus,
                     item.status === 'completed' ? styles.statusCompleted : styles.statusInProgress

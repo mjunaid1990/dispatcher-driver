@@ -13,6 +13,7 @@ import { useDriver } from '../../../hooks/useDriver';
 import ScreenHeader from '../../../components/ScreenHeader';
 import { colors, spacing, borderRadius, typography, elevation } from '../../../theme/theme';
 import { showAlert } from '../../../utils/alerts';
+import { formatCurrency } from '../../../utils/currency';
 
 const PerformanceScreen = () => {
   const { userInfo } = useAuth();
@@ -76,7 +77,7 @@ const PerformanceScreen = () => {
         <View style={styles.statDivider} />
         <View style={styles.statItem}>
           <Text style={styles.statValue}>
-            ${Number(driver?.earningsBalance ?? 0).toFixed(0)}
+            {formatCurrency(driver?.earningsBalance ?? 0, { decimals: 0 })}
           </Text>
           <Text style={styles.statLabel}>Balance</Text>
         </View>
