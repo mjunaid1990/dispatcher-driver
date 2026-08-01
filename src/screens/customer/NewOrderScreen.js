@@ -16,13 +16,11 @@ import FormField from '../../components/FormField';
 import Button from '../../components/Button';
 import api from '../../api/client';
 import { showAlert } from '../../utils/alerts';
-import { CURRENCY_CODE } from '../../config';
+import { CURRENCY_CODE, BASE_FEES } from '../../config';
 import { formatCurrency } from '../../utils/currency';
 
 const SIZES = ['small', 'medium', 'large'];
 const PRIORITIES = ['normal', 'express'];
-
-const baseFeeBySize = { small: 5, medium: 8, large: 12 };
 
 const NewOrderScreen = () => {
   const { userInfo } = useAuth();
@@ -55,8 +53,10 @@ const NewOrderScreen = () => {
   const removeItem = (index) => setItems((prev) => prev.filter((_, i) => i !== index));
 
   const estimateTotal = () => {
-    const base = baseFeeBySize[packageSize] || 8;
-    const itemFee = items.reduce((sum, item) => sum + (parseInt(item.qty, 10) || 0) * 2, 0);
+    const base = BASE_FEES[packageSize] || BASE_FEES.medium;
+    const itemFee = items
+      .filter((item) => item.name.trim())
+      .reduce((sum, item) => sum + (parseInt(item.qty, 10) || 0) * 2, 0);
     const cod = parseFloat(codAmount) || 0;
     return base + itemFee + cod;
   };
@@ -114,7 +114,7 @@ const NewOrderScreen = () => {
         codAmount: parseFloat(codAmount) || 0,
         priority,
         pricing: {
-          base: baseFeeBySize[packageSize],
+          base: BASE_FEES[packageSize] || BASE_FEES.medium,
           distanceFee: 0,
           surge: priority === 'express' ? 2 : 0,
           tip: 0,

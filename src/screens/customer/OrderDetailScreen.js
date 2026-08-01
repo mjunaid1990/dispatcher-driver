@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   Linking,
   ActivityIndicator,
 } from 'react-native';
@@ -37,6 +38,13 @@ const OrderDetailScreen = ({ route }) => {
   const [events, setEvents] = useState([]);
   const [rated, setRated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData(true);
+    setRefreshing(false);
+  }, [loadData]);
 
   const loadData = useCallback(async (silent = false) => {
     if (!orderId) return;
@@ -146,7 +154,10 @@ const OrderDetailScreen = ({ route }) => {
   return (
     <View style={styles.container}>
       <ScreenHeader title="Order Details" />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.mint} />}
+      >
         <View style={styles.topCard}>
           <View style={styles.topRow}>
             <Text style={styles.orderNumber}>{order.orderNumber}</Text>
