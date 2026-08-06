@@ -1,5 +1,6 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { setOnUnauthorized } from '../api/client';
 
 const AuthContext = createContext();
 
@@ -9,16 +10,16 @@ export const AuthProvider = ({ children }) => {
   const [driverInfo, setDriverInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const login = async (token, user, driver) => {
+  const login = async (token, user, driverInfo) => {
     try {
       await AsyncStorage.setItem('userToken', token);
       await AsyncStorage.setItem('userInfo', JSON.stringify(user));
-      if (driver) {
-        await AsyncStorage.setItem('driverInfo', JSON.stringify(driver));
+      if (driverInfo) {
+        await AsyncStorage.setItem('driverInfo', JSON.stringify(driverInfo));
       }
       setUserToken(token);
       setUserInfo(user);
-      setDriverInfo(driver || null);
+      setDriverInfo(driverInfo || null);
     } catch (error) {
       console.error('Login error:', error);
     }
@@ -36,6 +37,16 @@ export const AuthProvider = ({ children }) => {
       console.error('Logout error:', error);
     }
   };
+
+  const handleAuthError = async () => {
+    await logout();
+    // Navigation to login screen would be handled by the consuming component
+  };
+
+  useEffect(() => {
+    setOnUnauthorized(handleAuthError);
+    return () => setOnUnauthorized(null);
+  }, []);
 
   const updateUser = async (user) => {
     setUserInfo(user);
@@ -76,6 +87,7 @@ export const AuthProvider = ({ children }) => {
         checkAuth,
         updateUser,
         updateDriver,
+        handleAuthError,
       }}
     >
       {children}

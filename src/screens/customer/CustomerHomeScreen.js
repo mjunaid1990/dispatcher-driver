@@ -56,7 +56,6 @@ const CustomerHomeScreen = () => {
         try {
           const src = item.order;
           const payload = {
-            orderNumber: `ORD-${Date.now()}`,
             customerId: userInfo._id,
             pickup: src.pickup,
             dropoff: src.dropoff,

@@ -40,12 +40,6 @@ const OrderDetailScreen = ({ route }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadData(true);
-    setRefreshing(false);
-  }, [loadData]);
-
   const loadData = useCallback(async (silent = false) => {
     if (!orderId) return;
     try {
@@ -65,6 +59,12 @@ const OrderDetailScreen = ({ route }) => {
       setLoading(false);
     }
   }, [orderId]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadData(true);
+    setRefreshing(false);
+  }, [loadData]);
 
   useFocusEffect(
     useCallback(() => {

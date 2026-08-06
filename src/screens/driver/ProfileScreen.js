@@ -13,6 +13,7 @@ import { colors, spacing, borderRadius, elevation, typography } from '../../them
 import Button from '../../components/Button';
 import { useDriver } from '../../hooks/useDriver';
 import { formatCurrency } from '../../utils/currency';
+import config from '../../config';
 
 const ProfileScreen = () => {
   const { userInfo } = useAuth();
@@ -111,7 +112,7 @@ const ProfileScreen = () => {
 
         {/* App Version */}
         <View style={styles.versionSection}>
-          <Text style={styles.versionText}>Dispatcher Driver App v1.0.0</Text>
+          <Text style={styles.versionText}>{config.APP_NAME} v1.0.0</Text>
         </View>
       </ScrollView>
     </View>

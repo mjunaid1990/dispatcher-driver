@@ -1,8 +1,9 @@
-import axios from 'axios';
-import { UPLOAD_URL } from '../config';
+import api from './client';
 
 /**
- * Upload a file (photo or signature) to the Laravel file upload endpoint
+ * Upload a file (photo or signature) to the Laravel file upload endpoint.
+ * Uses the shared API client so the request goes to the same server URL
+ * (config.API_URL) with the authenticated token.
  *
  * @param {string} fileUri Local file URI (from Expo camera / image picker / canvas)
  * @param {string} fieldName Field name expected by backend ('photo', 'signature', or 'file')
@@ -23,7 +24,7 @@ export const uploadFile = async (fileUri, fieldName = 'file', folder = 'uploads'
     });
     formData.append('folder', folder);
 
-    const response = await axios.post(UPLOAD_URL, formData, {
+    const response = await api.post('/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

@@ -1,23 +1,47 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL, API_TIMEOUT } from '../config';
+import config from '../config';
 
 const api = axios.create({
-  baseURL: API_URL,
-  timeout: API_TIMEOUT,
+  timeout: config.API_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-api.interceptors.request.use(async (config) => {
+api.interceptors.request.use(async (requestConfig) => {
+  requestConfig.baseURL = config.API_URL;
   try {
     const token = await AsyncStorage.getItem('userToken');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      requestConfig.headers.Authorization = `Bearer ${token}`;
     }
   } catch (error) {}
-  return config;
+  return requestConfig;
 });
+
+let onUnauthorized = null;
+
+export const setOnUnauthorized = (handler) => {
+  onUnauthorized = handler;
+};
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid - clear auth data
+      try {
+        await AsyncStorage.multiRemove(['userToken', 'userInfo', 'driverInfo']);
+      } catch (e) {
+        console.error('Failed to clear auth data:', e);
+      }
+      if (typeof onUnauthorized === 'function') {
+        onUnauthorized();
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;

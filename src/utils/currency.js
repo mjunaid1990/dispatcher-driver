@@ -1,6 +1,10 @@
-import { CURRENCY_CODE, CURRENCY_SYMBOL } from '../config';
+import config from '../config';
 
 export const formatCurrency = (
   amount,
-  { symbol = CURRENCY_SYMBOL, code = CURRENCY_CODE, decimals = 2, showCode = false } = {}
-) => `${symbol}${Number(amount || 0).toFixed(decimals)}${showCode ? ` ${code}` : ''}`;
+  { symbol, code, decimals = 2, showCode = false } = {}
+) => {
+  const currencySymbol = symbol || config.CURRENCY_SYMBOL;
+  const currencyCode = code || config.CURRENCY_CODE;
+  return `${currencySymbol}${Number(amount || 0).toFixed(decimals)}${showCode ? ` ${currencyCode}` : ''}`;
+};

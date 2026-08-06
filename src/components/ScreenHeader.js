@@ -7,7 +7,7 @@ const ScreenHeader = ({ title }) => {
   return (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-        <Text style={styles.backText}>← Back</Text>
+        <Text style={[styles.backText, { color: colors.mint }]}>← Back</Text>
       </TouchableOpacity>
       <Text style={styles.title}>{title}</Text>
       <View style={styles.spacer} />
@@ -30,7 +30,6 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: typography.fontSize.base,
-    color: colors.mint,
     fontWeight: typography.fontWeight.semibold,
   },
   title: {

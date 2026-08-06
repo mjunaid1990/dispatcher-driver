@@ -17,7 +17,6 @@ import api from '../../api/client';
 import { showAlert } from '../../utils/alerts';
 
 const SignupScreen = () => {
-  const [role, setRole] = useState('driver');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -27,10 +26,7 @@ const SignupScreen = () => {
   const { login } = useAuth();
   const navigation = useNavigation();
 
-  const ROLES = [
-    { key: 'driver', label: 'Driver', icon: '🚗' },
-    { key: 'customer', label: 'Customer', icon: '🛍️' },
-  ];
+  const role = 'customer'; // Fixed to customer registration only
 
   const handleSignup = async () => {
     if (!name || !email || !phone || !password || !confirmPassword) {
@@ -50,35 +46,19 @@ const SignupScreen = () => {
 
     setLoading(true);
     try {
-      const userRes = await api.post('/users', { name, email, phone, password, role });
-      const user = userRes.data;
+      // Use the public registration endpoint for customer only
+      const registerRes = await api.post('/users/register', { name, email, phone, password, role });
+      const { token, user } = registerRes.data;
 
-      if (role === 'driver') {
-        try {
-          await api.post('/drivers', { userId: user._id });
-        } catch (driverError) {
-          console.warn('Driver profile creation failed:', driverError.response?.data || driverError.message);
-        }
-      } else {
-        try {
-          await api.post('/customers', { userId: user._id });
-        } catch (customerError) {
-          console.warn('Customer profile creation failed:', customerError.response?.data || customerError.message);
-        }
+      // Log in first so the auth token is available for profile creation
+      await login(token, user, null);
+
+      // Create customer profile after login (with authentication)
+      try {
+        await api.post('/customers', { userId: user._id });
+      } catch (customerError) {
+        console.warn('Customer profile creation failed:', customerError.response?.data || customerError.message);
       }
-
-      const loginRes = await api.post('/users/login', { email, password });
-      const { token } = loginRes.data;
-
-      let driver = null;
-      if (role === 'driver') {
-        try {
-          const driverRes = await api.get('/drivers', { params: { userId: user._id } });
-          driver = driverRes.data[0] || null;
-        } catch (driverError) {}
-      }
-
-      await login(token, user, driver);
     } catch (error) {
       const message = error.response?.data?.message || error.message || 'Signup failed';
       showAlert('Signup Failed', message);
@@ -95,28 +75,10 @@ const SignupScreen = () => {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Text style={styles.title}>Sign Up</Text>
-          <Text style={styles.subtitle}>Create your account</Text>
+          <Text style={styles.subtitle}>Create your customer account</Text>
         </View>
 
         <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>I am a</Text>
-            <View style={styles.roleRow}>
-              {ROLES.map((r) => (
-                <TouchableOpacity
-                  key={r.key}
-                  style={[styles.roleCard, role === r.key && styles.roleCardActive]}
-                  onPress={() => setRole(r.key)}
-                >
-                  <Text style={styles.roleIcon}>{r.icon}</Text>
-                  <Text style={[styles.roleText, role === r.key && styles.roleTextActive]}>
-                    {r.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
           <View style={styles.inputContainer}>
             <Text style={styles.label}>Full Name</Text>
             <TextInput
@@ -257,35 +219,6 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.mint,
     fontWeight: typography.fontWeight.semibold,
-  },
-  roleRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  roleCard: {
-    flex: 1,
-    alignItems: 'center',
-    padding: spacing.lg,
-    backgroundColor: colors.surfaceCard,
-    borderWidth: 2,
-    borderColor: colors.border,
-    borderRadius: borderRadius.lg,
-  },
-  roleCardActive: {
-    borderColor: colors.mint,
-    backgroundColor: colors.surfaceElevated,
-  },
-  roleIcon: {
-    fontSize: typography.fontSize['3xl'],
-    marginBottom: spacing.sm,
-  },
-  roleText: {
-    fontSize: typography.fontSize.base,
-    fontWeight: typography.fontWeight.semibold,
-    color: colors.textSecondary,
-  },
-  roleTextActive: {
-    color: colors.mint,
   },
 });
 

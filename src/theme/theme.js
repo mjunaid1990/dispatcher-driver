@@ -159,6 +159,51 @@ export const gradients = {
   hero: ['#0d1b2a', '#1a2d3d', '#2dd4a8'],
 };
 
+const clamp = (n) => Math.max(0, Math.min(255, Math.round(n)));
+
+const mixHex = (hex1, hex2, ratio = 0.5) => {
+  const parse = (h) => {
+    const clean = (h || '').replace('#', '');
+    if (clean.length === 3) {
+      return [
+        parseInt(clean[0] + clean[0], 16),
+        parseInt(clean[1] + clean[1], 16),
+        parseInt(clean[2] + clean[2], 16),
+      ];
+    }
+    return [
+      parseInt(clean.slice(0, 2), 16),
+      parseInt(clean.slice(2, 4), 16),
+      parseInt(clean.slice(4, 6), 16),
+    ];
+  };
+  try {
+    const [r1, g1, b1] = parse(hex1);
+    const [r2, g2, b2] = parse(hex2);
+    const hex = (n) => clamp(n).toString(16).padStart(2, '0');
+    return `#${hex(r1 + (r2 - r1) * ratio)}${hex(g1 + (g2 - g1) * ratio)}${hex(b1 + (b2 - b1) * ratio)}`;
+  } catch (e) {
+    return hex1;
+  }
+};
+
+export const applyBrandColors = (primary = '#2dd4a8', secondary = null) => {
+  colors.mint = primary;
+  colors.mintLight = mixHex(primary, '#ffffff', 0.25);
+  colors.mintLighter = mixHex(primary, '#ffffff', 0.45);
+  colors.mintDark = mixHex(primary, '#000000', 0.15);
+  colors.glow = mixHex(primary, '#ffffff', 0.55);
+  colors.glowLight = mixHex(primary, '#ffffff', 0.7);
+  colors.glowDark = mixHex(primary, '#000000', 0.1);
+  colors.success = primary;
+  gradients.primary = [primary, colors.glow];
+  if (secondary) {
+    colors.base = secondary;
+    colors.textInverse = secondary;
+    gradients.hero = [secondary, '#1a2d3d', primary];
+  }
+};
+
 export const statusColors = {
   pending: {
     bg: 'rgba(251, 191, 36, 0.2)',

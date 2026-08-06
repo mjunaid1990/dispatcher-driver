@@ -14,6 +14,7 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, typography } from '../../theme/theme';
 import Button from '../../components/Button';
 import api from '../../api/client';
+import config from '../../config';
 import { showAlert } from '../../utils/alerts';
 
 const LoginScreen = () => {
@@ -37,7 +38,7 @@ const LoginScreen = () => {
       let driver = null;
       try {
         const driverRes = await api.get('/drivers', { params: { userId: user._id } });
-        driver = driverRes.data[0] || null;
+        driver = driverRes.data.data ? driverRes.data.data[0] : driverRes.data[0] || null;
       } catch (driverError) {}
 
       await login(token, user, driver);
@@ -59,7 +60,7 @@ const LoginScreen = () => {
           <View style={styles.header}>
             <View style={styles.logoContainer}>
               <Text style={styles.logoIcon}>🚚</Text>
-              <Text style={styles.logoText}>DISPATCH</Text>
+              <Text style={[styles.logoText, { color: colors.mint }]}>{config.APP_NAME}</Text>
             </View>
             <Text style={styles.subtitle}>Sign in to manage your deliveries</Text>
           </View>
@@ -148,8 +149,9 @@ const styles = StyleSheet.create({
   logoText: {
     fontSize: typography.fontSize['4xl'],
     fontWeight: typography.fontWeight.bold,
-    color: colors.text,
-    letterSpacing: 4,
+    letterSpacing: 2,
+    maxWidth: 280,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: typography.fontSize.base,

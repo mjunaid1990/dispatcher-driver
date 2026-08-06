@@ -16,7 +16,7 @@ import FormField from '../../components/FormField';
 import Button from '../../components/Button';
 import api from '../../api/client';
 import { showAlert } from '../../utils/alerts';
-import { CURRENCY_CODE, BASE_FEES } from '../../config';
+import config from '../../config';
 import { formatCurrency } from '../../utils/currency';
 
 const SIZES = ['small', 'medium', 'large'];
@@ -53,7 +53,7 @@ const NewOrderScreen = () => {
   const removeItem = (index) => setItems((prev) => prev.filter((_, i) => i !== index));
 
   const estimateTotal = () => {
-    const base = BASE_FEES[packageSize] || BASE_FEES.medium;
+    const base = config.BASE_FEES[packageSize] || config.BASE_FEES.medium;
     const itemFee = items
       .filter((item) => item.name.trim())
       .reduce((sum, item) => sum + (parseInt(item.qty, 10) || 0) * 2, 0);
@@ -84,8 +84,8 @@ const NewOrderScreen = () => {
       showAlert('Error', 'Add at least one item');
       return;
     }
-    if (codAmount && Number.isNaN(parseFloat(codAmount))) {
-      showAlert('Error', 'Cash on delivery must be a number');
+    if (codAmount && (Number.isNaN(parseFloat(codAmount)) || parseFloat(codAmount) < 0)) {
+      showAlert('Error', 'Cash on delivery must be a positive number');
       return;
     }
 
@@ -95,7 +95,6 @@ const NewOrderScreen = () => {
     setSubmitting(true);
     try {
       const payload = {
-        orderNumber: `ORD-${Date.now()}`,
         customerId: userInfo._id,
         pickup: {
           line: pickup.line.trim(),
@@ -114,12 +113,12 @@ const NewOrderScreen = () => {
         codAmount: parseFloat(codAmount) || 0,
         priority,
         pricing: {
-          base: BASE_FEES[packageSize] || BASE_FEES.medium,
+          base: config.BASE_FEES[packageSize] || config.BASE_FEES.medium,
           distanceFee: 0,
           surge: priority === 'express' ? 2 : 0,
           tip: 0,
           total: estimateTotal(),
-          currency: CURRENCY_CODE,
+          currency: config.CURRENCY_CODE,
         },
         status: 'pending',
       };

@@ -33,7 +33,7 @@ const DriverHomeScreen = () => {
     if (!userInfo) return null;
     try {
       const res = await api.get('/drivers', { params: { userId: userInfo._id } });
-      const found = res.data[0] || null;
+      const found = res.data.data ? res.data.data[0] : res.data[0] || null;
       if (found) setDriver(found);
       return found;
     } catch (error) {

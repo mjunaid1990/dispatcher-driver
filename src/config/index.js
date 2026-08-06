@@ -1,21 +1,31 @@
 import { Platform } from 'react-native';
-
-const envApiUrl = process.env.EXPO_PUBLIC_API_URL;
-const envLaravelUrl = process.env.EXPO_PUBLIC_LARAVEL_URL;
-const envTimeout = process.env.EXPO_PUBLIC_API_TIMEOUT;
-const envCurrencyCode = process.env.EXPO_PUBLIC_CURRENCY_CODE;
-const envCurrencySymbol = process.env.EXPO_PUBLIC_CURRENCY_SYMBOL;
-const envBaseFeeSmall = process.env.EXPO_PUBLIC_BASE_FEE_SMALL;
-const envBaseFeeMedium = process.env.EXPO_PUBLIC_BASE_FEE_MEDIUM;
-const envBaseFeeLarge = process.env.EXPO_PUBLIC_BASE_FEE_LARGE;
+import { applyBrandColors } from '../theme/theme';
 
 const DEFAULT_API_URL = 'http://localhost:3000/api';
-const DEFAULT_LARAVEL_URL = 'http://localhost:8000';
 const DEFAULT_CURRENCY_CODE = 'USD';
 const DEFAULT_CURRENCY_SYMBOL = '$';
 const DEFAULT_BASE_FEES = { small: 5, medium: 8, large: 12 };
 
+const env = (key, fallback) => {
+  const value = process.env[key];
+  return value === undefined || value === null || value === '' ? fallback : value;
+};
+
+const stripTrailingSlashes = (value) => String(value || '').replace(/\/+$/, '');
+
+// Derive every URL the app needs from a single client server URL.
+const deriveUrls = (serverUrl) => {
+  const base = stripTrailingSlashes(serverUrl).replace(/\/api\/?$/, '');
+  return {
+    API_URL: `${base}/api`,
+    LARAVEL_URL: base,
+    UPLOAD_URL: `${base}/api/upload`,
+    SOCKET_URL: base,
+  };
+};
+
 const getApiUrl = () => {
+  const envApiUrl = env('EXPO_PUBLIC_API_URL', '');
   if (envApiUrl) return envApiUrl;
   if (__DEV__) {
     return Platform.select({
@@ -26,37 +36,35 @@ const getApiUrl = () => {
   return DEFAULT_API_URL;
 };
 
-const getLaravelUrl = () => {
-  if (envLaravelUrl) return envLaravelUrl;
-  if (__DEV__) {
-    return Platform.select({
-      android: 'http://10.0.2.2:8000',
-      default: 'http://localhost:8000',
-    });
+const initialState = () => {
+  const apiUrl = getApiUrl();
+  const urls = deriveUrls(apiUrl);
+
+  return {
+    ...urls,
+    API_TIMEOUT: parseInt(env('EXPO_PUBLIC_API_TIMEOUT', '30000'), 10) || 30000,
+    CURRENCY_CODE: (env('EXPO_PUBLIC_CURRENCY_CODE', DEFAULT_CURRENCY_CODE) || DEFAULT_CURRENCY_CODE).toUpperCase().slice(0, 3),
+    CURRENCY_SYMBOL: env('EXPO_PUBLIC_CURRENCY_SYMBOL', DEFAULT_CURRENCY_SYMBOL) || DEFAULT_CURRENCY_SYMBOL,
+    BASE_FEES: {
+      small: parseFloat(env('EXPO_PUBLIC_BASE_FEE_SMALL', DEFAULT_BASE_FEES.small)) || DEFAULT_BASE_FEES.small,
+      medium: parseFloat(env('EXPO_PUBLIC_BASE_FEE_MEDIUM', DEFAULT_BASE_FEES.medium)) || DEFAULT_BASE_FEES.medium,
+      large: parseFloat(env('EXPO_PUBLIC_BASE_FEE_LARGE', DEFAULT_BASE_FEES.large)) || DEFAULT_BASE_FEES.large,
+    },
+    APP_NAME: env('EXPO_PUBLIC_APP_NAME', 'Dispatcher Driver App'),
+    PRIMARY_COLOR: env('EXPO_PUBLIC_PRIMARY_COLOR', '#2dd4a8'),
+    SECONDARY_COLOR: env('EXPO_PUBLIC_SECONDARY_COLOR', '#0d1b2a'),
+  };
+};
+
+export const config = initialState();
+
+export const loadConfig = async () => {
+  // Configuration is now loaded from environment variables only
+  // Apply brand colors based on config values
+  if (config.PRIMARY_COLOR || config.SECONDARY_COLOR) {
+    applyBrandColors(config.PRIMARY_COLOR, config.SECONDARY_COLOR);
   }
-  return DEFAULT_LARAVEL_URL;
+  return config;
 };
 
-export const API_URL = getApiUrl().replace(/\/+$/, '');
-export const LARAVEL_URL = getLaravelUrl().replace(/\/+$/, '');
-export const UPLOAD_URL = `${LARAVEL_URL}/api/upload`;
-export const API_TIMEOUT = parseInt(envTimeout, 10) || 30000;
-export const SOCKET_URL = API_URL.replace(/\/api\/?$/, '');
-export const CURRENCY_CODE = (envCurrencyCode || DEFAULT_CURRENCY_CODE).toUpperCase().slice(0, 3);
-export const CURRENCY_SYMBOL = envCurrencySymbol || DEFAULT_CURRENCY_SYMBOL;
-export const BASE_FEES = {
-  small: parseFloat(envBaseFeeSmall) || DEFAULT_BASE_FEES.small,
-  medium: parseFloat(envBaseFeeMedium) || DEFAULT_BASE_FEES.medium,
-  large: parseFloat(envBaseFeeLarge) || DEFAULT_BASE_FEES.large,
-};
-
-export default {
-  API_URL,
-  LARAVEL_URL,
-  UPLOAD_URL,
-  API_TIMEOUT,
-  SOCKET_URL,
-  CURRENCY_CODE,
-  CURRENCY_SYMBOL,
-  BASE_FEES,
-};
+export default config;

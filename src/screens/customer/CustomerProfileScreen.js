@@ -11,6 +11,7 @@ import FormField from '../../components/FormField';
 import Button from '../../components/Button';
 import api from '../../api/client';
 import { showAlert } from '../../utils/alerts';
+import config from '../../config';
 
 const CustomerProfileScreen = () => {
   const { userInfo, updateUser } = useAuth();
@@ -87,7 +88,7 @@ const CustomerProfileScreen = () => {
         </View>
 
         <View style={styles.versionSection}>
-          <Text style={styles.versionText}>Dispatcher App v1.0.0</Text>
+          <Text style={styles.versionText}>{config.APP_NAME} v1.0.0</Text>
         </View>
       </ScrollView>
     </View>
